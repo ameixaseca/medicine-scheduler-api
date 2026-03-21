@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MedicineScheduler.Api.Data;
+using MedicineScheduler.Api.Jobs;
 using MedicineScheduler.Api.Services;
 using Serilog;
 
@@ -23,6 +24,8 @@ builder.Services.AddScoped<PatientService>();
 builder.Services.AddSingleton<LogGenerationService>();
 builder.Services.AddScoped<MedicationService>();
 builder.Services.AddScoped<ScheduleService>();
+builder.Services.AddSingleton<IPushNotificationService, PushNotificationService>();
+builder.Services.AddHostedService<SchedulerJob>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opt =>
