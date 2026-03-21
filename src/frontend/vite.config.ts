@@ -27,7 +27,14 @@ export default defineConfig({
     })] : [])
   ],
   server: {
-    proxy: { '/api': { target: 'http://localhost:5000', rewrite: p => p.replace(/^\/api/, '') } },
+    proxy: {
+      '/auth': 'http://localhost:5000',
+      '/patients': 'http://localhost:5000',
+      '/medications': 'http://localhost:5000',
+      '/schedule': 'http://localhost:5000',
+      '/push': 'http://localhost:5000',
+      '/settings': 'http://localhost:5000',
+    },
     fs: { allow: [worktreeRoot] }
   },
   test: {
