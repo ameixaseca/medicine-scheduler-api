@@ -2,3 +2,4 @@ docs/superpowers/specs/2026-03-21-medicine-scheduler-design.pdf
 .claude
 .worktrees/
 *.db
+node_modules/

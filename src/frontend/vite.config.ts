@@ -1,11 +1,15 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import path from 'path'
+
+const isTest = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test'
+const worktreeRoot = path.resolve(__dirname, '../..')
 
 export default defineConfig({
   plugins: [
     react(),
-    VitePWA({
+    ...(!isTest ? [VitePWA({
       registerType: 'autoUpdate',
       strategies: 'injectManifest',
       srcDir: 'src',
@@ -20,14 +24,17 @@ export default defineConfig({
         ]
       },
       devOptions: { enabled: true, type: 'module' }
-    })
+    })] : [])
   ],
   server: {
-    proxy: { '/api': { target: 'http://localhost:5000', rewrite: path => path.replace(/^\/api/, '') } }
+    proxy: { '/api': { target: 'http://localhost:5000', rewrite: p => p.replace(/^\/api/, '') } },
+    fs: { allow: [worktreeRoot] }
   },
   test: {
+    root: worktreeRoot,
     environment: 'jsdom',
-    setupFiles: ['./src/test-setup.ts'],
-    globals: true
+    setupFiles: [path.resolve(__dirname, 'src/test-setup.ts')],
+    globals: true,
+    include: ['tests/frontend/**/*.{test,spec}.?(c|m)[jt]s?(x)', 'src/frontend/src/**/*.{test,spec}.?(c|m)[jt]s?(x)']
   }
 })
