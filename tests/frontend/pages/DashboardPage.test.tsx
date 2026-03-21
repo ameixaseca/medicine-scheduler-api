@@ -32,4 +32,24 @@ describe('DashboardPage', () => {
 
     await waitFor(() => expect(confirmSpy).toHaveBeenCalledWith('1'))
   })
+
+  it('retries queued confirm when online event fires', async () => {
+    vi.spyOn(scheduleApi, 'getTodaySchedule').mockResolvedValue([mockItem])
+    // First call fails (offline), retry succeeds
+    const confirmSpy = vi.spyOn(scheduleApi, 'confirmLog')
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ id: '1', status: 'taken' })
+
+    render(<MemoryRouter><DashboardPage /></MemoryRouter>)
+    await waitFor(() => screen.getByRole('button', { name: /confirm/i }))
+
+    // Click while "offline" → queues the action
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }))
+    await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
+
+    // Simulate coming back online → retry fires
+    window.dispatchEvent(new Event('online'))
+
+    await waitFor(() => expect(confirmSpy).toHaveBeenCalledTimes(2))
+  })
 })
