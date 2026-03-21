@@ -24,7 +24,7 @@ builder.Services.AddScoped<PatientService>();
 builder.Services.AddSingleton<LogGenerationService>();
 builder.Services.AddScoped<MedicationService>();
 builder.Services.AddScoped<ScheduleService>();
-builder.Services.AddSingleton<IPushNotificationService, PushNotificationService>();
+builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
 builder.Services.AddHostedService<SchedulerJob>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
