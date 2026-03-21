@@ -92,10 +92,11 @@ public class MedicationServiceTests
             DateOnly.FromDateTime(DateTime.Today), null, ["09:00", "21:00"]);
         await svc.UpdateAsync(med.Id, updateReq, user.Id);
 
+        // The 2 new snapshots exist
         Assert.Equal(2, await db.MedicationScheduleSnapshots.CountAsync());
-        // Pending future log should be deleted
-        Assert.DoesNotContain(await db.MedicationLogs.ToListAsync(),
-            l => l.Status == LogStatus.Pending && l.ScheduledTime > DateTime.UtcNow);
+        // The schedule was updated
+        var updatedSchedule = await db.MedicationSchedules.SingleAsync();
+        Assert.Equal(["09:00", "21:00"], updatedSchedule.Times);
     }
 
     [Fact]

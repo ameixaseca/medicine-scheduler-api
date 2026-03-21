@@ -115,6 +115,12 @@ public class MedicationService(AppDbContext db, LogGenerationService logSvc, Tim
         db.MedicationLogs.RemoveRange(pendingFutureLogs);
 
         await db.SaveChangesAsync();
+
+        // 4. Generate same-day + next-day logs
+        var newLogs = logSvc.GenerateInitialLogs(med, snapshot, tz, nowUtc);
+        db.MedicationLogs.AddRange(newLogs);
+        await db.SaveChangesAsync();
+
         await tx.CommitAsync();
 
         med.Schedule = schedule;
