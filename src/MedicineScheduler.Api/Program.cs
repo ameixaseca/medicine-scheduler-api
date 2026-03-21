@@ -22,6 +22,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PatientService>();
 builder.Services.AddSingleton<LogGenerationService>();
 builder.Services.AddScoped<MedicationService>();
+builder.Services.AddScoped<ScheduleService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opt =>
