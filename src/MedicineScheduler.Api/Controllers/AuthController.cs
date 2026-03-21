@@ -6,15 +6,17 @@ namespace MedicineScheduler.Api.Controllers;
 
 [ApiController]
 [Route("auth")]
-public class AuthController(AuthService authService) : ControllerBase
+public class AuthController(AuthService authService, IWebHostEnvironment env) : ControllerBase
 {
     private const string RefreshCookieName = "refreshToken";
 
+    // Production (cross-domain Vercel → Fly.io): SameSite=None requires Secure=true
+    // Development (same-origin via Vite proxy): SameSite=Lax, Secure not required
     private CookieOptions RefreshCookieOptions => new()
     {
         HttpOnly = true,
-        Secure = true,
-        SameSite = SameSiteMode.Strict,
+        Secure = env.IsProduction(),
+        SameSite = env.IsProduction() ? SameSiteMode.None : SameSiteMode.Lax,
         Expires = DateTimeOffset.UtcNow.AddDays(7)
     };
 

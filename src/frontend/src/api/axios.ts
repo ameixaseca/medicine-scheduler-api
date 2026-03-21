@@ -1,5 +1,9 @@
 import axios from 'axios'
 
+// In production (Vercel), VITE_API_URL points to the Fly.io backend.
+// In development, it's empty and requests go through the Vite proxy.
+export const API_URL = import.meta.env.VITE_API_URL ?? ''
+
 // Token lives in memory — set by AuthContext after login/register/refresh
 let accessToken: string | null = null
 
@@ -11,7 +15,7 @@ export function getAccessToken() {
   return accessToken
 }
 
-const api = axios.create({ baseURL: '/', withCredentials: true })
+const api = axios.create({ baseURL: API_URL, withCredentials: true })
 
 api.interceptors.request.use((config) => {
   if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
@@ -52,7 +56,7 @@ api.interceptors.response.use(
     isRefreshing = true
 
     try {
-      const { data } = await axios.post('/auth/refresh', {}, { withCredentials: true })
+      const { data } = await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true })
       setAccessToken(data.accessToken)
       onTokenRefreshed(data.accessToken)
       original.headers.Authorization = `Bearer ${data.accessToken}`

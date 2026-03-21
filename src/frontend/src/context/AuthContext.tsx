@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, type ReactNode } from 'react'
 import axios from 'axios'
-import { setAccessToken } from '../api/axios'
+import { setAccessToken, API_URL } from '../api/axios'
 import { logout as apiLogout } from '../api/auth'
 
 interface AuthContextValue {
@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // On mount: try silent refresh to restore session
   useEffect(() => {
-    axios.post<{ accessToken: string }>('/auth/refresh', {}, { withCredentials: true })
+    axios.post<{ accessToken: string }>(`${API_URL}/auth/refresh`, {}, { withCredentials: true })
       .then(({ data }) => {
         setAccessToken(data.accessToken)
         setIsAuthenticated(true)
