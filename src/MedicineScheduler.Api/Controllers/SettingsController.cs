@@ -5,6 +5,7 @@ using MedicineScheduler.Api.DTOs.Settings;
 using MedicineScheduler.Api.Entities;
 using MedicineScheduler.Api.Extensions;
 using Microsoft.EntityFrameworkCore;
+using MedicineScheduler.Api.Services;
 using TimeZoneConverter;
 
 namespace MedicineScheduler.Api.Controllers;
@@ -12,7 +13,7 @@ namespace MedicineScheduler.Api.Controllers;
 [ApiController]
 [Route("settings")]
 [Authorize]
-public class SettingsController(AppDbContext db, TimeProvider time) : ControllerBase
+public class SettingsController(AppDbContext db, TimeProvider time, LogGenerationService logGenerationService) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> Get()
@@ -58,11 +59,10 @@ public class SettingsController(AppDbContext db, TimeProvider time) : Controller
                 .Where(m => m.Patient.UserId == userId && !m.IsDeleted)
                 .ToListAsync();
 
-            var logSvc = new Services.LogGenerationService();
             foreach (var med in medications.Where(m => m.Schedule != null))
             {
                 var snapshot = med.Snapshots.First(); // already ordered descending
-                var newLogs = logSvc.GenerateInitialLogs(med, snapshot, newTz, nowUtc);
+                var newLogs = logGenerationService.GenerateInitialLogs(med, snapshot, newTz, nowUtc);
                 db.MedicationLogs.AddRange(newLogs);
             }
 

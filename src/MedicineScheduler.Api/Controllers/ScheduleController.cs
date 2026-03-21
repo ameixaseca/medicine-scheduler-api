@@ -8,14 +8,11 @@ namespace MedicineScheduler.Api.Controllers;
 [ApiController]
 [Route("schedule")]
 [Authorize]
-public class ScheduleController(ScheduleService scheduleService, TimeProvider time) : ControllerBase
+public class ScheduleController(ScheduleService scheduleService) : ControllerBase
 {
     [HttpGet("today")]
-    public async Task<IActionResult> Today()
-    {
-        var today = DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
-        return Ok(await scheduleService.GetForDateAsync(today, User.GetUserId()));
-    }
+    public async Task<IActionResult> Today() =>
+        Ok(await scheduleService.GetForTodayAsync(User.GetUserId()));
 
     [HttpGet]
     public async Task<IActionResult> ByDate([FromQuery] DateOnly date) =>

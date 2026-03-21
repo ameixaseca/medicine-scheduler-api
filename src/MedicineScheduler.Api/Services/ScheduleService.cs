@@ -8,6 +8,14 @@ namespace MedicineScheduler.Api.Services;
 
 public class ScheduleService(AppDbContext db, TimeProvider time)
 {
+    public async Task<List<ScheduleItemResponse>> GetForTodayAsync(Guid userId)
+    {
+        var user = await db.Users.FindAsync(userId) ?? throw new KeyNotFoundException();
+        var tz = TZConvert.GetTimeZoneInfo(user.Timezone);
+        var localToday = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(time.GetUtcNow().UtcDateTime, tz));
+        return await GetForDateAsync(localToday, userId);
+    }
+
     public async Task<List<ScheduleItemResponse>> GetForDateAsync(DateOnly date, Guid userId)
     {
         var user = await db.Users.FindAsync(userId) ?? throw new KeyNotFoundException();

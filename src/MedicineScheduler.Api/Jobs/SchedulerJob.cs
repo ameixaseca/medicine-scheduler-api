@@ -74,10 +74,12 @@ public class SchedulerJob(
         var cutoff = nowUtc.AddMinutes(-30);
 
         var overdue = await db.MedicationLogs
+            .Include(l => l.Medication).ThenInclude(m => m.Patient)
             .Where(l =>
                 l.Status == LogStatus.Pending &&
                 l.ScheduledTime < cutoff &&
-                !l.Medication.IsDeleted)
+                !l.Medication.IsDeleted &&
+                !l.Medication.Patient.IsDeleted)
             .ToListAsync();
 
         foreach (var log in overdue)
