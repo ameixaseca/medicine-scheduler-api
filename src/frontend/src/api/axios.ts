@@ -1,0 +1,70 @@
+import axios from 'axios'
+
+// Token lives in memory — set by AuthContext after login/register/refresh
+let accessToken: string | null = null
+
+export function setAccessToken(token: string | null) {
+  accessToken = token
+}
+
+export function getAccessToken() {
+  return accessToken
+}
+
+const api = axios.create({ baseURL: '/', withCredentials: true })
+
+api.interceptors.request.use((config) => {
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
+  return config
+})
+
+// 401 interceptor: attempt refresh, then retry once
+let isRefreshing = false
+let refreshSubscribers: ((token: string) => void)[] = []
+
+function subscribeTokenRefresh(cb: (token: string) => void) {
+  refreshSubscribers.push(cb)
+}
+
+function onTokenRefreshed(token: string) {
+  refreshSubscribers.forEach(cb => cb(token))
+  refreshSubscribers = []
+}
+
+api.interceptors.response.use(
+  res => res,
+  async (error) => {
+    const original = error.config
+    if (error.response?.status !== 401 || original._retry) {
+      return Promise.reject(error)
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve) => {
+        subscribeTokenRefresh((token) => {
+          original.headers.Authorization = `Bearer ${token}`
+          resolve(api(original))
+        })
+      })
+    }
+
+    original._retry = true
+    isRefreshing = true
+
+    try {
+      const { data } = await axios.post('/auth/refresh', {}, { withCredentials: true })
+      setAccessToken(data.accessToken)
+      onTokenRefreshed(data.accessToken)
+      original.headers.Authorization = `Bearer ${data.accessToken}`
+      return api(original)
+    } catch {
+      setAccessToken(null)
+      window.location.href = '/login'
+      return Promise.reject(error)
+    } finally {
+      isRefreshing = false
+    }
+  }
+)
+
+export default api
