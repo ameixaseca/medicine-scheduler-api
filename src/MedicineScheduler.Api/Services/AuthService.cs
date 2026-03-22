@@ -91,7 +91,7 @@ public class AuthService(AppDbContext db, IConfiguration config, TimeProvider ti
             IssuerSigningKey = key,
             ValidIssuer = config["Jwt:Issuer"],
             ValidAudience = config["Jwt:Audience"],
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.FromSeconds(30)
         }, out _);
     }
 }

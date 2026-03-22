@@ -1,5 +1,6 @@
 // src/MedicineScheduler.Api/Middleware/ExceptionMiddleware.cs
 using System.Text.Json;
+using Microsoft.IdentityModel.Tokens;
 
 namespace MedicineScheduler.Api.Middleware;
 
@@ -16,10 +17,15 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
             context.Response.StatusCode = 404;
             await WriteJson(context, new { error = "Not found." });
         }
+        catch (SecurityTokenValidationException)
+        {
+            context.Response.StatusCode = 401;
+            await WriteJson(context, new { error = "Invalid or expired token." });
+        }
         catch (UnauthorizedAccessException)
         {
-            context.Response.StatusCode = 403;
-            await WriteJson(context, new { error = "Access denied." });
+            context.Response.StatusCode = 401;
+            await WriteJson(context, new { error = "Unauthorized." });
         }
         catch (InvalidOperationException ex)
         {
