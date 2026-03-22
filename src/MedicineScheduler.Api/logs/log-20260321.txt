@@ -1,0 +1,1345 @@
+2026-03-21 14:40:48.955 -03:00 [WRN] The property 'MedicationSchedule.Times' is a collection or enumeration type with a value converter but with no value comparer. Set a value comparer to ensure the collection/enumeration elements are compared correctly.
+2026-03-21 14:40:49.003 -03:00 [WRN] The property 'MedicationScheduleSnapshot.Times' is a collection or enumeration type with a value converter but with no value comparer. Set a value comparer to ensure the collection/enumeration elements are compared correctly.
+2026-03-21 14:40:49.225 -03:00 [INF] Executed DbCommand (22ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+PRAGMA journal_mode = 'wal';
+2026-03-21 14:40:49.325 -03:00 [INF] Executed DbCommand (14ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE "__EFMigrationsHistory" (
+    "MigrationId" TEXT NOT NULL CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY,
+    "ProductVersion" TEXT NOT NULL
+);
+2026-03-21 14:40:49.340 -03:00 [INF] Executed DbCommand (2ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-03-21 14:40:49.347 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "MigrationId", "ProductVersion"
+FROM "__EFMigrationsHistory"
+ORDER BY "MigrationId";
+2026-03-21 14:40:49.366 -03:00 [INF] Applying migration '20260321143705_InitialCreate'.
+2026-03-21 14:40:49.419 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE "Users" (
+    "Id" TEXT NOT NULL CONSTRAINT "PK_Users" PRIMARY KEY,
+    "Email" TEXT NOT NULL,
+    "PasswordHash" TEXT NOT NULL,
+    "Name" TEXT NOT NULL,
+    "Timezone" TEXT NOT NULL,
+    "NotificationPreference" TEXT NOT NULL,
+    "IsDeleted" INTEGER NOT NULL
+);
+2026-03-21 14:40:49.426 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE "Patients" (
+    "Id" TEXT NOT NULL CONSTRAINT "PK_Patients" PRIMARY KEY,
+    "Name" TEXT NOT NULL,
+    "DateOfBirth" TEXT NOT NULL,
+    "Notes" TEXT NULL,
+    "IsDeleted" INTEGER NOT NULL,
+    "UserId" TEXT NOT NULL,
+    CONSTRAINT "FK_Patients_Users_UserId" FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+);
+2026-03-21 14:40:49.428 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE "PushSubscriptions" (
+    "Id" TEXT NOT NULL CONSTRAINT "PK_PushSubscriptions" PRIMARY KEY,
+    "Endpoint" TEXT NOT NULL,
+    "P256dhKey" TEXT NOT NULL,
+    "AuthKey" TEXT NOT NULL,
+    "UserId" TEXT NOT NULL,
+    CONSTRAINT "FK_PushSubscriptions_Users_UserId" FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+);
+2026-03-21 14:40:49.431 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE "Medications" (
+    "Id" TEXT NOT NULL CONSTRAINT "PK_Medications" PRIMARY KEY,
+    "Name" TEXT NOT NULL,
+    "Dosage" TEXT NOT NULL,
+    "Unit" TEXT NOT NULL,
+    "ApplicationMethod" TEXT NOT NULL,
+    "StartDate" TEXT NOT NULL,
+    "EndDate" TEXT NULL,
+    "IsDeleted" INTEGER NOT NULL,
+    "PatientId" TEXT NOT NULL,
+    CONSTRAINT "FK_Medications_Patients_PatientId" FOREIGN KEY ("PatientId") REFERENCES "Patients" ("Id") ON DELETE CASCADE
+);
+2026-03-21 14:40:49.435 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE "MedicationSchedules" (
+    "Id" TEXT NOT NULL CONSTRAINT "PK_MedicationSchedules" PRIMARY KEY,
+    "FrequencyPerDay" INTEGER NOT NULL,
+    "Times" TEXT NOT NULL,
+    "MedicationId" TEXT NOT NULL,
+    CONSTRAINT "FK_MedicationSchedules_Medications_MedicationId" FOREIGN KEY ("MedicationId") REFERENCES "Medications" ("Id") ON DELETE CASCADE
+);
+2026-03-21 14:40:49.438 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE "MedicationScheduleSnapshots" (
+    "Id" TEXT NOT NULL CONSTRAINT "PK_MedicationScheduleSnapshots" PRIMARY KEY,
+    "FrequencyPerDay" INTEGER NOT NULL,
+    "Times" TEXT NOT NULL,
+    "CreatedAt" TEXT NOT NULL,
+    "MedicationId" TEXT NOT NULL,
+    CONSTRAINT "FK_MedicationScheduleSnapshots_Medications_MedicationId" FOREIGN KEY ("MedicationId") REFERENCES "Medications" ("Id") ON DELETE CASCADE
+);
+2026-03-21 14:40:49.441 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE TABLE "MedicationLogs" (
+    "Id" TEXT NOT NULL CONSTRAINT "PK_MedicationLogs" PRIMARY KEY,
+    "ScheduledTime" TEXT NOT NULL,
+    "TakenAt" TEXT NULL,
+    "Status" TEXT NOT NULL,
+    "SkippedBy" TEXT NULL,
+    "NotificationSentAt" TEXT NULL,
+    "MedicationId" TEXT NOT NULL,
+    "MedicationScheduleSnapshotId" TEXT NOT NULL,
+    CONSTRAINT "FK_MedicationLogs_MedicationScheduleSnapshots_MedicationScheduleSnapshotId" FOREIGN KEY ("MedicationScheduleSnapshotId") REFERENCES "MedicationScheduleSnapshots" ("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_MedicationLogs_Medications_MedicationId" FOREIGN KEY ("MedicationId") REFERENCES "Medications" ("Id") ON DELETE CASCADE
+);
+2026-03-21 14:40:49.445 -03:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_MedicationLogs_MedicationId" ON "MedicationLogs" ("MedicationId");
+2026-03-21 14:40:49.448 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_MedicationLogs_MedicationScheduleSnapshotId" ON "MedicationLogs" ("MedicationScheduleSnapshotId");
+2026-03-21 14:40:49.451 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_Medications_PatientId" ON "Medications" ("PatientId");
+2026-03-21 14:40:49.453 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE UNIQUE INDEX "IX_MedicationSchedules_MedicationId" ON "MedicationSchedules" ("MedicationId");
+2026-03-21 14:40:49.456 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_MedicationScheduleSnapshots_MedicationId" ON "MedicationScheduleSnapshots" ("MedicationId");
+2026-03-21 14:40:49.459 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE INDEX "IX_Patients_UserId" ON "Patients" ("UserId");
+2026-03-21 14:40:49.462 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE UNIQUE INDEX "IX_PushSubscriptions_UserId_Endpoint" ON "PushSubscriptions" ("UserId", "Endpoint");
+2026-03-21 14:40:49.465 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+CREATE UNIQUE INDEX "IX_Users_Email" ON "Users" ("Email");
+2026-03-21 14:40:49.468 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20260321143705_InitialCreate', '8.0.25');
+2026-03-21 14:40:49.500 -03:00 [INF] User profile is available. Using 'C:\Users\luizp\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-03-21 14:40:49.647 -03:00 [INF] Now listening on: http://localhost:5104
+2026-03-21 14:40:49.656 -03:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-03-21 14:40:49.660 -03:00 [INF] Hosting environment: Development
+2026-03-21 14:40:49.663 -03:00 [INF] Content root path: C:\repos\medicine-scheduler\src\MedicineScheduler.Api
+2026-03-21 14:40:50.136 -03:00 [INF] Executed DbCommand (6ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:40:50.208 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:40:50.468 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:41:50.560 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:41:50.567 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:41:50.570 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:42:50.581 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:42:50.587 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:42:50.589 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:43:50.594 -03:00 [INF] Executed DbCommand (1ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:43:50.599 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:43:50.601 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:44:32.761 -03:00 [INF] Application is shutting down...
+2026-03-21 14:44:44.270 -03:00 [WRN] The property 'MedicationSchedule.Times' is a collection or enumeration type with a value converter but with no value comparer. Set a value comparer to ensure the collection/enumeration elements are compared correctly.
+2026-03-21 14:44:44.359 -03:00 [WRN] The property 'MedicationScheduleSnapshot.Times' is a collection or enumeration type with a value converter but with no value comparer. Set a value comparer to ensure the collection/enumeration elements are compared correctly.
+2026-03-21 14:44:44.615 -03:00 [INF] Executed DbCommand (14ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-03-21 14:44:44.634 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-03-21 14:44:44.659 -03:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "MigrationId", "ProductVersion"
+FROM "__EFMigrationsHistory"
+ORDER BY "MigrationId";
+2026-03-21 14:44:44.690 -03:00 [INF] No migrations were applied. The database is already up to date.
+2026-03-21 14:44:44.724 -03:00 [INF] User profile is available. Using 'C:\Users\luizp\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-03-21 14:44:44.817 -03:00 [INF] Now listening on: http://localhost:5104
+2026-03-21 14:44:44.822 -03:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-03-21 14:44:44.824 -03:00 [INF] Hosting environment: Development
+2026-03-21 14:44:44.826 -03:00 [INF] Content root path: C:\repos\medicine-scheduler\src\MedicineScheduler.Api
+2026-03-21 14:44:45.249 -03:00 [INF] Executed DbCommand (17ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:44:45.401 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:44:45.420 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:44:56.002 -03:00 [INF] Application is shutting down...
+2026-03-21 14:46:45.345 -03:00 [WRN] The property 'MedicationSchedule.Times' is a collection or enumeration type with a value converter but with no value comparer. Set a value comparer to ensure the collection/enumeration elements are compared correctly.
+2026-03-21 14:46:45.446 -03:00 [WRN] The property 'MedicationScheduleSnapshot.Times' is a collection or enumeration type with a value converter but with no value comparer. Set a value comparer to ensure the collection/enumeration elements are compared correctly.
+2026-03-21 14:46:45.921 -03:00 [INF] Executed DbCommand (29ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-03-21 14:46:45.943 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-03-21 14:46:45.982 -03:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "MigrationId", "ProductVersion"
+FROM "__EFMigrationsHistory"
+ORDER BY "MigrationId";
+2026-03-21 14:46:46.021 -03:00 [INF] No migrations were applied. The database is already up to date.
+2026-03-21 14:46:46.128 -03:00 [INF] User profile is available. Using 'C:\Users\luizp\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-03-21 14:46:46.841 -03:00 [INF] Now listening on: https://localhost:7203
+2026-03-21 14:46:46.845 -03:00 [INF] Now listening on: http://localhost:5104
+2026-03-21 14:46:47.180 -03:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-03-21 14:46:47.186 -03:00 [INF] Hosting environment: Development
+2026-03-21 14:46:47.188 -03:00 [INF] Content root path: C:\repos\medicine-scheduler\src\MedicineScheduler.Api
+2026-03-21 14:46:47.395 -03:00 [INF] Executed DbCommand (18ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:46:47.449 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:46:47.482 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:47:48.606 -03:00 [INF] Executed DbCommand (4ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:47:49.668 -03:00 [INF] Executed DbCommand (18ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:47:49.778 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:48:49.853 -03:00 [INF] Executed DbCommand (1ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:48:49.862 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:48:49.869 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:49:49.923 -03:00 [INF] Executed DbCommand (2ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:49:49.930 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:49:49.933 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:50:49.961 -03:00 [INF] Executed DbCommand (1ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:50:49.970 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:50:49.975 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:51:06.154 -03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5104/ - null null
+2026-03-21 14:51:06.484 -03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5104/ - 307 0 null 352.1369ms
+2026-03-21 14:51:06.645 -03:00 [INF] Request starting HTTP/2 GET https://localhost:7203/ - null null
+2026-03-21 14:51:06.887 -03:00 [INF] Request finished HTTP/2 GET https://localhost:7203/ - 404 0 null 241.3107ms
+2026-03-21 14:51:06.897 -03:00 [INF] Request reached the end of the middleware pipeline without being handled by application code. Request path: GET https://localhost:7203/, Response status code: 404
+2026-03-21 14:51:09.820 -03:00 [INF] Request starting HTTP/2 GET https://localhost:7203/ - null null
+2026-03-21 14:51:09.841 -03:00 [INF] Request finished HTTP/2 GET https://localhost:7203/ - 404 0 null 21.1671ms
+2026-03-21 14:51:09.855 -03:00 [INF] Request reached the end of the middleware pipeline without being handled by application code. Request path: GET https://localhost:7203/, Response status code: 404
+2026-03-21 14:51:49.995 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:51:50.002 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:51:50.008 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:52:50.017 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:52:50.023 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:52:50.027 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:53:50.049 -03:00 [INF] Executed DbCommand (5ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:53:50.056 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:53:50.067 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:54:50.084 -03:00 [INF] Executed DbCommand (3ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:54:50.090 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:54:50.093 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:55:09.685 -03:00 [INF] Application is shutting down...
+2026-03-21 14:55:33.248 -03:00 [WRN] The property 'MedicationSchedule.Times' is a collection or enumeration type with a value converter but with no value comparer. Set a value comparer to ensure the collection/enumeration elements are compared correctly.
+2026-03-21 14:55:33.322 -03:00 [WRN] The property 'MedicationScheduleSnapshot.Times' is a collection or enumeration type with a value converter but with no value comparer. Set a value comparer to ensure the collection/enumeration elements are compared correctly.
+2026-03-21 14:55:33.588 -03:00 [INF] Executed DbCommand (16ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-03-21 14:55:33.610 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT COUNT(*) FROM "sqlite_master" WHERE "name" = '__EFMigrationsHistory' AND "type" = 'table';
+2026-03-21 14:55:33.635 -03:00 [INF] Executed DbCommand (1ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "MigrationId", "ProductVersion"
+FROM "__EFMigrationsHistory"
+ORDER BY "MigrationId";
+2026-03-21 14:55:33.661 -03:00 [INF] No migrations were applied. The database is already up to date.
+2026-03-21 14:55:33.694 -03:00 [INF] User profile is available. Using 'C:\Users\luizp\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+2026-03-21 14:55:33.790 -03:00 [INF] Now listening on: http://localhost:5104
+2026-03-21 14:55:33.798 -03:00 [INF] Application started. Press Ctrl+C to shut down.
+2026-03-21 14:55:33.802 -03:00 [INF] Hosting environment: Development
+2026-03-21 14:55:33.804 -03:00 [INF] Content root path: C:\repos\medicine-scheduler\src\MedicineScheduler.Api
+2026-03-21 14:55:34.449 -03:00 [INF] Executed DbCommand (9ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:55:34.516 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:55:34.537 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:56:07.726 -03:00 [INF] Request starting HTTP/1.1 POST http://localhost:5104/auth/refresh - application/json 2
+2026-03-21 14:56:07.726 -03:00 [INF] Request starting HTTP/1.1 POST http://localhost:5104/auth/refresh - application/json 2
+2026-03-21 14:56:07.790 -03:00 [WRN] Failed to determine the https port for redirect.
+2026-03-21 14:56:07.849 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:07.849 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:07.893 -03:00 [INF] Route matched with {action = "Refresh", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Refresh() on controller MedicineScheduler.Api.Controllers.AuthController (MedicineScheduler.Api).
+2026-03-21 14:56:07.893 -03:00 [INF] Route matched with {action = "Refresh", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Refresh() on controller MedicineScheduler.Api.Controllers.AuthController (MedicineScheduler.Api).
+2026-03-21 14:56:07.921 -03:00 [INF] Executing ObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ProblemDetails'.
+2026-03-21 14:56:07.921 -03:00 [INF] Executing ObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ProblemDetails'.
+2026-03-21 14:56:08.129 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api) in 218.2061ms
+2026-03-21 14:56:08.129 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api) in 221.097ms
+2026-03-21 14:56:08.135 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:08.137 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:08.144 -03:00 [INF] Request finished HTTP/1.1 POST http://localhost:5104/auth/refresh - 401 null application/problem+json; charset=utf-8 422.4989ms
+2026-03-21 14:56:08.144 -03:00 [INF] Request finished HTTP/1.1 POST http://localhost:5104/auth/refresh - 401 null application/problem+json; charset=utf-8 422.4458ms
+2026-03-21 14:56:30.559 -03:00 [INF] Request starting HTTP/1.1 POST http://localhost:5104/auth/refresh - application/json 2
+2026-03-21 14:56:30.565 -03:00 [INF] Request starting HTTP/1.1 POST http://localhost:5104/auth/refresh - application/json 2
+2026-03-21 14:56:30.578 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:30.578 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:30.585 -03:00 [INF] Route matched with {action = "Refresh", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Refresh() on controller MedicineScheduler.Api.Controllers.AuthController (MedicineScheduler.Api).
+2026-03-21 14:56:30.583 -03:00 [INF] Route matched with {action = "Refresh", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Refresh() on controller MedicineScheduler.Api.Controllers.AuthController (MedicineScheduler.Api).
+2026-03-21 14:56:30.599 -03:00 [INF] Executing ObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ProblemDetails'.
+2026-03-21 14:56:30.601 -03:00 [INF] Executing ObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ProblemDetails'.
+2026-03-21 14:56:30.604 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api) in 12.0716ms
+2026-03-21 14:56:30.607 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api) in 7.2764ms
+2026-03-21 14:56:30.610 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:30.614 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:30.617 -03:00 [INF] Request finished HTTP/1.1 POST http://localhost:5104/auth/refresh - 401 null application/problem+json; charset=utf-8 52.2451ms
+2026-03-21 14:56:30.620 -03:00 [INF] Request finished HTTP/1.1 POST http://localhost:5104/auth/refresh - 401 null application/problem+json; charset=utf-8 61.8835ms
+2026-03-21 14:56:34.626 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:56:34.633 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:56:34.639 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:56:35.923 -03:00 [INF] Request starting HTTP/1.1 POST http://localhost:5104/auth/refresh - application/json 2
+2026-03-21 14:56:35.928 -03:00 [INF] Request starting HTTP/1.1 POST http://localhost:5104/auth/refresh - application/json 2
+2026-03-21 14:56:35.953 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:35.959 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:35.963 -03:00 [INF] Route matched with {action = "Refresh", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Refresh() on controller MedicineScheduler.Api.Controllers.AuthController (MedicineScheduler.Api).
+2026-03-21 14:56:35.965 -03:00 [INF] Route matched with {action = "Refresh", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Refresh() on controller MedicineScheduler.Api.Controllers.AuthController (MedicineScheduler.Api).
+2026-03-21 14:56:35.971 -03:00 [INF] Executing ObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ProblemDetails'.
+2026-03-21 14:56:35.975 -03:00 [INF] Executing ObjectResult, writing value of type 'Microsoft.AspNetCore.Mvc.ProblemDetails'.
+2026-03-21 14:56:35.978 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api) in 8.3838ms
+2026-03-21 14:56:35.982 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api) in 7.7714ms
+2026-03-21 14:56:35.985 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:35.987 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.AuthController.Refresh (MedicineScheduler.Api)'
+2026-03-21 14:56:35.990 -03:00 [INF] Request finished HTTP/1.1 POST http://localhost:5104/auth/refresh - 401 null application/problem+json; charset=utf-8 67.1435ms
+2026-03-21 14:56:35.992 -03:00 [INF] Request finished HTTP/1.1 POST http://localhost:5104/auth/refresh - 401 null application/problem+json; charset=utf-8 64.0532ms
+2026-03-21 14:57:34.652 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:57:34.658 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:57:34.661 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:58:34.684 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:58:34.689 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:58:34.693 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 14:59:34.703 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:59:34.708 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 14:59:34.713 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:00:34.717 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:00:34.724 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:00:34.731 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:01:34.748 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:01:34.755 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:01:34.761 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:02:34.774 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:02:34.779 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:02:34.782 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:03:34.799 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:03:34.805 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:03:34.809 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:04:34.817 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:04:34.822 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:04:34.825 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:05:34.836 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:05:34.842 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:05:34.847 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:06:34.867 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:06:34.873 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:06:34.880 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:07:34.893 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:07:34.900 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:07:34.907 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:08:34.921 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:08:34.927 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:08:34.932 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:09:34.941 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:09:34.946 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:09:34.950 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:10:34.966 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:10:34.971 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:10:34.975 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:11:34.986 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:11:34.992 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:11:34.996 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:12:35.014 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:12:35.020 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:12:35.024 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:13:35.042 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:13:35.048 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:13:35.053 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:14:35.066 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:14:35.072 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:14:35.076 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:15:35.085 -03:00 [INF] Executed DbCommand (1ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:15:35.091 -03:00 [INF] Executed DbCommand (1ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:15:35.094 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:16:35.117 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:16:35.125 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:16:35.129 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:17:35.147 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:17:35.152 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:17:35.159 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:18:35.180 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:18:35.187 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:18:35.192 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:19:35.204 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:19:35.211 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:19:35.214 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:20:35.231 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:20:35.237 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:20:35.242 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:21:35.254 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:21:35.260 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:21:35.262 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:22:35.272 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:22:35.277 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:22:35.282 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:23:35.293 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:23:35.300 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:23:35.305 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:24:35.313 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:24:35.318 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:24:35.323 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:25:35.341 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:25:35.348 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:25:35.351 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:26:35.370 -03:00 [INF] Executed DbCommand (1ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:26:35.411 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:26:35.417 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:27:35.437 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:27:35.444 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:27:35.450 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:28:35.470 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:28:35.475 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:28:35.481 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:29:35.486 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:29:35.492 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:29:35.494 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:30:35.500 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:30:35.506 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:30:35.510 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:31:35.524 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:31:35.530 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:31:35.533 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:32:35.541 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:32:35.548 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:32:35.554 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:33:35.568 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__windowStart_0='?' (DbType = DateTime), @__windowEnd_1='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId", "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone", "m1"."Id", "m1"."CreatedAt", "m1"."FrequencyPerDay", "m1"."MedicationId", "m1"."Times"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+INNER JOIN "Users" AS "u" ON "p"."UserId" = "u"."Id"
+INNER JOIN "MedicationScheduleSnapshots" AS "m1" ON "m"."MedicationScheduleSnapshotId" = "m1"."Id"
+WHERE "m"."ScheduledTime" >= @__windowStart_0 AND "m"."ScheduledTime" <= @__windowEnd_1 AND "m"."NotificationSentAt" IS NULL AND "m"."Status" = 'Pending' AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:33:35.573 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__cutoff_0='?' (DbType = DateTime)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."Status" = 'Pending' AND "m"."ScheduledTime" < @__cutoff_0 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+2026-03-21 15:33:35.579 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE NOT ("u"."IsDeleted")
+2026-03-21 15:33:53.650 -03:00 [INF] Request starting HTTP/1.1 POST http://localhost:5104/auth/register - application/json 106
+2026-03-21 15:33:53.657 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.AuthController.Register (MedicineScheduler.Api)'
+2026-03-21 15:33:53.686 -03:00 [INF] Route matched with {action = "Register", controller = "Auth"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Register(MedicineScheduler.Api.DTOs.Auth.RegisterRequest) on controller MedicineScheduler.Api.Controllers.AuthController (MedicineScheduler.Api).
+2026-03-21 15:33:53.990 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__req_Email_0='?' (Size = 20)], CommandType='"Text"', CommandTimeout='30']
+SELECT EXISTS (
+    SELECT 1
+    FROM "Users" AS "u"
+    WHERE "u"."Email" = @__req_Email_0)
+2026-03-21 15:33:54.729 -03:00 [INF] Executed DbCommand (12ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (Size = 20), @p2='?' (DbType = Boolean), @p3='?' (Size = 10), @p4='?' (Size = 4), @p5='?' (Size = 60), @p6='?' (Size = 17)], CommandType='"Text"', CommandTimeout='30']
+INSERT INTO "Users" ("Id", "Email", "IsDeleted", "Name", "NotificationPreference", "PasswordHash", "Timezone")
+VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+2026-03-21 15:33:54.791 -03:00 [INF] Executing ObjectResult, writing value of type 'MedicineScheduler.Api.DTOs.Auth.AuthResponse'.
+2026-03-21 15:33:54.798 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.AuthController.Register (MedicineScheduler.Api) in 1107.1819ms
+2026-03-21 15:33:54.801 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.AuthController.Register (MedicineScheduler.Api)'
+2026-03-21 15:33:54.803 -03:00 [INF] Request finished HTTP/1.1 POST http://localhost:5104/auth/register - 201 null application/json; charset=utf-8 1152.3377ms
+2026-03-21 15:33:54.840 -03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5104/schedule/today - null null
+2026-03-21 15:33:54.934 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:33:54.942 -03:00 [INF] Route matched with {action = "Today", controller = "Schedule"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Today() on controller MedicineScheduler.Api.Controllers.ScheduleController (MedicineScheduler.Api).
+2026-03-21 15:33:54.981 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__get_Item_0='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE "u"."Id" = @__get_Item_0
+LIMIT 1
+2026-03-21 15:33:55.102 -03:00 [INF] Executed DbCommand (1ms) [Parameters=[@__startUtc_0='?' (DbType = DateTime), @__endUtc_1='?' (DbType = DateTime), @__userId_2='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."ScheduledTime" >= @__startUtc_0 AND "m"."ScheduledTime" < @__endUtc_1 AND "p"."UserId" = @__userId_2 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+ORDER BY "m"."ScheduledTime"
+2026-03-21 15:33:55.108 -03:00 [INF] Executing OkObjectResult, writing value of type 'System.Collections.Generic.List`1[[MedicineScheduler.Api.DTOs.Schedule.ScheduleItemResponse, MedicineScheduler.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-03-21 15:33:55.120 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api) in 172.7861ms
+2026-03-21 15:33:55.123 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:33:55.125 -03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5104/schedule/today - 200 null application/json; charset=utf-8 285.4617ms
+2026-03-21 15:33:55.125 -03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5104/schedule/today - null null
+2026-03-21 15:33:55.139 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:33:55.141 -03:00 [INF] Route matched with {action = "Today", controller = "Schedule"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Today() on controller MedicineScheduler.Api.Controllers.ScheduleController (MedicineScheduler.Api).
+2026-03-21 15:33:55.146 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__get_Item_0='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE "u"."Id" = @__get_Item_0
+LIMIT 1
+2026-03-21 15:33:55.150 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__startUtc_0='?' (DbType = DateTime), @__endUtc_1='?' (DbType = DateTime), @__userId_2='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."ScheduledTime" >= @__startUtc_0 AND "m"."ScheduledTime" < @__endUtc_1 AND "p"."UserId" = @__userId_2 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+ORDER BY "m"."ScheduledTime"
+2026-03-21 15:33:55.154 -03:00 [INF] Executing OkObjectResult, writing value of type 'System.Collections.Generic.List`1[[MedicineScheduler.Api.DTOs.Schedule.ScheduleItemResponse, MedicineScheduler.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-03-21 15:33:55.156 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api) in 11.7025ms
+2026-03-21 15:33:55.159 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:33:55.161 -03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5104/schedule/today - 200 null application/json; charset=utf-8 35.3905ms
+2026-03-21 15:33:57.252 -03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5104/patients - null null
+2026-03-21 15:33:57.260 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.PatientsController.GetAll (MedicineScheduler.Api)'
+2026-03-21 15:33:57.267 -03:00 [INF] Route matched with {action = "GetAll", controller = "Patients"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] GetAll() on controller MedicineScheduler.Api.Controllers.PatientsController (MedicineScheduler.Api).
+2026-03-21 15:33:57.288 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__userId_0='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "p"."Id", "p"."Name", "p"."DateOfBirth", "p"."Notes"
+FROM "Patients" AS "p"
+WHERE "p"."UserId" = @__userId_0 AND NOT ("p"."IsDeleted")
+2026-03-21 15:33:57.293 -03:00 [INF] Executing OkObjectResult, writing value of type 'System.Collections.Generic.List`1[[MedicineScheduler.Api.DTOs.Patients.PatientResponse, MedicineScheduler.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-03-21 15:33:57.306 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.PatientsController.GetAll (MedicineScheduler.Api) in 34.1725ms
+2026-03-21 15:33:57.310 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.PatientsController.GetAll (MedicineScheduler.Api)'
+2026-03-21 15:33:57.312 -03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5104/patients - null null
+2026-03-21 15:33:57.313 -03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5104/patients - 200 null application/json; charset=utf-8 61.4039ms
+2026-03-21 15:33:57.321 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.PatientsController.GetAll (MedicineScheduler.Api)'
+2026-03-21 15:33:57.334 -03:00 [INF] Route matched with {action = "GetAll", controller = "Patients"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] GetAll() on controller MedicineScheduler.Api.Controllers.PatientsController (MedicineScheduler.Api).
+2026-03-21 15:33:57.342 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__userId_0='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "p"."Id", "p"."Name", "p"."DateOfBirth", "p"."Notes"
+FROM "Patients" AS "p"
+WHERE "p"."UserId" = @__userId_0 AND NOT ("p"."IsDeleted")
+2026-03-21 15:33:57.347 -03:00 [INF] Executing OkObjectResult, writing value of type 'System.Collections.Generic.List`1[[MedicineScheduler.Api.DTOs.Patients.PatientResponse, MedicineScheduler.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-03-21 15:33:57.351 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.PatientsController.GetAll (MedicineScheduler.Api) in 11.5509ms
+2026-03-21 15:33:57.354 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.PatientsController.GetAll (MedicineScheduler.Api)'
+2026-03-21 15:33:57.357 -03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5104/patients - 200 null application/json; charset=utf-8 45.1102ms
+2026-03-21 15:34:02.960 -03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5104/schedule/today - null null
+2026-03-21 15:34:02.966 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:34:02.968 -03:00 [INF] Route matched with {action = "Today", controller = "Schedule"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Today() on controller MedicineScheduler.Api.Controllers.ScheduleController (MedicineScheduler.Api).
+2026-03-21 15:34:02.977 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__get_Item_0='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE "u"."Id" = @__get_Item_0
+LIMIT 1
+2026-03-21 15:34:02.985 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__startUtc_0='?' (DbType = DateTime), @__endUtc_1='?' (DbType = DateTime), @__userId_2='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."ScheduledTime" >= @__startUtc_0 AND "m"."ScheduledTime" < @__endUtc_1 AND "p"."UserId" = @__userId_2 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+ORDER BY "m"."ScheduledTime"
+2026-03-21 15:34:02.991 -03:00 [INF] Executing OkObjectResult, writing value of type 'System.Collections.Generic.List`1[[MedicineScheduler.Api.DTOs.Schedule.ScheduleItemResponse, MedicineScheduler.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-03-21 15:34:02.997 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api) in 22.9112ms
+2026-03-21 15:34:03.001 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:34:03.002 -03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5104/schedule/today - null null
+2026-03-21 15:34:03.005 -03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5104/schedule/today - 200 null application/json; charset=utf-8 44.5563ms
+2026-03-21 15:34:03.013 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:34:03.026 -03:00 [INF] Route matched with {action = "Today", controller = "Schedule"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Today() on controller MedicineScheduler.Api.Controllers.ScheduleController (MedicineScheduler.Api).
+2026-03-21 15:34:03.033 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__get_Item_0='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE "u"."Id" = @__get_Item_0
+LIMIT 1
+2026-03-21 15:34:03.040 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__startUtc_0='?' (DbType = DateTime), @__endUtc_1='?' (DbType = DateTime), @__userId_2='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."ScheduledTime" >= @__startUtc_0 AND "m"."ScheduledTime" < @__endUtc_1 AND "p"."UserId" = @__userId_2 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+ORDER BY "m"."ScheduledTime"
+2026-03-21 15:34:03.046 -03:00 [INF] Executing OkObjectResult, writing value of type 'System.Collections.Generic.List`1[[MedicineScheduler.Api.DTOs.Schedule.ScheduleItemResponse, MedicineScheduler.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-03-21 15:34:03.050 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api) in 18.0601ms
+2026-03-21 15:34:03.054 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:34:03.057 -03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5104/schedule/today - 200 null application/json; charset=utf-8 54.6202ms
+2026-03-21 15:34:05.884 -03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5104/settings - null null
+2026-03-21 15:34:05.891 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.SettingsController.Get (MedicineScheduler.Api)'
+2026-03-21 15:34:05.897 -03:00 [INF] Route matched with {action = "Get", controller = "Settings"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Get() on controller MedicineScheduler.Api.Controllers.SettingsController (MedicineScheduler.Api).
+2026-03-21 15:34:05.904 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__get_Item_0='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE "u"."Id" = @__get_Item_0
+LIMIT 1
+2026-03-21 15:34:05.909 -03:00 [INF] Executing OkObjectResult, writing value of type 'MedicineScheduler.Api.DTOs.Settings.SettingsDto'.
+2026-03-21 15:34:05.914 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.SettingsController.Get (MedicineScheduler.Api) in 12.5948ms
+2026-03-21 15:34:05.917 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.SettingsController.Get (MedicineScheduler.Api)'
+2026-03-21 15:34:05.920 -03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5104/settings - 200 null application/json; charset=utf-8 35.69ms
+2026-03-21 15:34:05.920 -03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5104/settings - null null
+2026-03-21 15:34:05.935 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.SettingsController.Get (MedicineScheduler.Api)'
+2026-03-21 15:34:05.938 -03:00 [INF] Route matched with {action = "Get", controller = "Settings"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Get() on controller MedicineScheduler.Api.Controllers.SettingsController (MedicineScheduler.Api).
+2026-03-21 15:34:05.944 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__get_Item_0='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE "u"."Id" = @__get_Item_0
+LIMIT 1
+2026-03-21 15:34:05.953 -03:00 [INF] Executing OkObjectResult, writing value of type 'MedicineScheduler.Api.DTOs.Settings.SettingsDto'.
+2026-03-21 15:34:05.958 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.SettingsController.Get (MedicineScheduler.Api) in 15.0904ms
+2026-03-21 15:34:05.961 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.SettingsController.Get (MedicineScheduler.Api)'
+2026-03-21 15:34:05.965 -03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5104/settings - 200 null application/json; charset=utf-8 45.0108ms
+2026-03-21 15:34:15.003 -03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5104/schedule/today - null null
+2026-03-21 15:34:15.011 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:34:15.013 -03:00 [INF] Route matched with {action = "Today", controller = "Schedule"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Today() on controller MedicineScheduler.Api.Controllers.ScheduleController (MedicineScheduler.Api).
+2026-03-21 15:34:15.021 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__get_Item_0='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE "u"."Id" = @__get_Item_0
+LIMIT 1
+2026-03-21 15:34:15.029 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__startUtc_0='?' (DbType = DateTime), @__endUtc_1='?' (DbType = DateTime), @__userId_2='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."ScheduledTime" >= @__startUtc_0 AND "m"."ScheduledTime" < @__endUtc_1 AND "p"."UserId" = @__userId_2 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+ORDER BY "m"."ScheduledTime"
+2026-03-21 15:34:15.036 -03:00 [INF] Executing OkObjectResult, writing value of type 'System.Collections.Generic.List`1[[MedicineScheduler.Api.DTOs.Schedule.ScheduleItemResponse, MedicineScheduler.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-03-21 15:34:15.040 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api) in 20.014ms
+2026-03-21 15:34:15.043 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:34:15.046 -03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5104/schedule/today - 200 null application/json; charset=utf-8 42.942ms
+2026-03-21 15:34:15.047 -03:00 [INF] Request starting HTTP/1.1 GET http://localhost:5104/schedule/today - null null
+2026-03-21 15:34:15.062 -03:00 [INF] Executing endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:34:15.066 -03:00 [INF] Route matched with {action = "Today", controller = "Schedule"}. Executing controller action with signature System.Threading.Tasks.Task`1[Microsoft.AspNetCore.Mvc.IActionResult] Today() on controller MedicineScheduler.Api.Controllers.ScheduleController (MedicineScheduler.Api).
+2026-03-21 15:34:15.073 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__get_Item_0='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "u"."Id", "u"."Email", "u"."IsDeleted", "u"."Name", "u"."NotificationPreference", "u"."PasswordHash", "u"."Timezone"
+FROM "Users" AS "u"
+WHERE "u"."Id" = @__get_Item_0
+LIMIT 1
+2026-03-21 15:34:15.081 -03:00 [INF] Executed DbCommand (0ms) [Parameters=[@__startUtc_0='?' (DbType = DateTime), @__endUtc_1='?' (DbType = DateTime), @__userId_2='?' (DbType = Guid)], CommandType='"Text"', CommandTimeout='30']
+SELECT "m"."Id", "m"."MedicationId", "m"."MedicationScheduleSnapshotId", "m"."NotificationSentAt", "m"."ScheduledTime", "m"."SkippedBy", "m"."Status", "m"."TakenAt", "m0"."Id", "m0"."ApplicationMethod", "m0"."Dosage", "m0"."EndDate", "m0"."IsDeleted", "m0"."Name", "m0"."PatientId", "m0"."StartDate", "m0"."Unit", "p"."Id", "p"."DateOfBirth", "p"."IsDeleted", "p"."Name", "p"."Notes", "p"."UserId"
+FROM "MedicationLogs" AS "m"
+INNER JOIN "Medications" AS "m0" ON "m"."MedicationId" = "m0"."Id"
+INNER JOIN "Patients" AS "p" ON "m0"."PatientId" = "p"."Id"
+WHERE "m"."ScheduledTime" >= @__startUtc_0 AND "m"."ScheduledTime" < @__endUtc_1 AND "p"."UserId" = @__userId_2 AND NOT ("m0"."IsDeleted") AND NOT ("p"."IsDeleted")
+ORDER BY "m"."ScheduledTime"
+2026-03-21 15:34:15.089 -03:00 [INF] Executing OkObjectResult, writing value of type 'System.Collections.Generic.List`1[[MedicineScheduler.Api.DTOs.Schedule.ScheduleItemResponse, MedicineScheduler.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null]]'.
+2026-03-21 15:34:15.093 -03:00 [INF] Executed action MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api) in 21.6094ms
+2026-03-21 15:34:15.097 -03:00 [INF] Executed endpoint 'MedicineScheduler.Api.Controllers.ScheduleController.Today (MedicineScheduler.Api)'
+2026-03-21 15:34:15.102 -03:00 [INF] Request finished HTTP/1.1 GET http://localhost:5104/schedule/today - 200 null application/json; charset=utf-8 54.9591ms
+2026-03-21 15:34:30.902 -03:00 [INF] Application is shutting down...
