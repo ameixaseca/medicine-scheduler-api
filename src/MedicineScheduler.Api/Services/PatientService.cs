@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MedicineScheduler.Api.Services;
 
-public class PatientService(AppDbContext db)
+public class PatientService(AppDbContext db, ILogger<PatientService> logger)
 {
     public async Task<List<PatientResponse>> GetAllAsync(Guid userId) =>
         await db.Patients
@@ -31,6 +31,9 @@ public class PatientService(AppDbContext db)
         };
         db.Patients.Add(patient);
         await db.SaveChangesAsync();
+
+        logger.LogInformation("Patient {PatientId} created by user {UserId}", patient.Id, userId);
+
         return new PatientResponse(patient.Id, patient.Name, patient.DateOfBirth, patient.Notes);
     }
 
@@ -41,6 +44,9 @@ public class PatientService(AppDbContext db)
         patient.DateOfBirth = req.DateOfBirth;
         patient.Notes = req.Notes;
         await db.SaveChangesAsync();
+
+        logger.LogInformation("Patient {PatientId} updated by user {UserId}", id, userId);
+
         return new PatientResponse(patient.Id, patient.Name, patient.DateOfBirth, patient.Notes);
     }
 
@@ -49,6 +55,8 @@ public class PatientService(AppDbContext db)
         var patient = await FindOrThrowAsync(id, userId);
         patient.IsDeleted = true;
         await db.SaveChangesAsync();
+
+        logger.LogInformation("Patient {PatientId} deleted by user {UserId}", id, userId);
     }
 
     private async Task<Patient> FindOrThrowAsync(Guid id, Guid userId)

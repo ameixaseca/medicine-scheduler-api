@@ -6,7 +6,7 @@ using TimeZoneConverter;
 
 namespace MedicineScheduler.Api.Services;
 
-public class MedicationService(AppDbContext db, LogGenerationService logSvc, TimeProvider time)
+public class MedicationService(AppDbContext db, LogGenerationService logSvc, TimeProvider time, ILogger<MedicationService> logger)
 {
     public async Task<List<MedicationResponse>> GetAllForPatientAsync(Guid patientId, Guid userId)
     {
@@ -72,6 +72,10 @@ public class MedicationService(AppDbContext db, LogGenerationService logSvc, Tim
         await db.SaveChangesAsync();
         await tx.CommitAsync();
 
+        logger.LogInformation(
+            "Medication {MedicationId} created for patient {PatientId} by user {UserId}: {LogCount} logs generated",
+            medication.Id, patientId, userId, logs.Count);
+
         medication.Schedule = schedule;
         return ToResponse(medication);
     }
@@ -123,6 +127,10 @@ public class MedicationService(AppDbContext db, LogGenerationService logSvc, Tim
 
         await tx.CommitAsync();
 
+        logger.LogInformation(
+            "Medication {MedicationId} updated by user {UserId}: {DeletedCount} pending logs removed, {GeneratedCount} new logs generated",
+            id, userId, pendingFutureLogs.Count, newLogs.Count);
+
         med.Schedule = schedule;
         return ToResponse(med);
     }
@@ -139,6 +147,10 @@ public class MedicationService(AppDbContext db, LogGenerationService logSvc, Tim
 
         med.IsDeleted = true;
         await db.SaveChangesAsync();
+
+        logger.LogInformation(
+            "Medication {MedicationId} deleted by user {UserId}: {DeletedCount} pending logs removed",
+            id, userId, pendingFutureLogs.Count);
     }
 
     private async Task VerifyPatientOwnershipAsync(Guid patientId, Guid userId)

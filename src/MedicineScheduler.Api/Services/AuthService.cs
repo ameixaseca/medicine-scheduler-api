@@ -10,7 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace MedicineScheduler.Api.Services;
 
-public class AuthService(AppDbContext db, IConfiguration config, TimeProvider time)
+public class AuthService(AppDbContext db, IConfiguration config, TimeProvider time, ILogger<AuthService> logger)
 {
     public async Task<(AuthResponse Response, string RefreshToken)> RegisterAsync(RegisterRequest req)
     {
@@ -29,6 +29,8 @@ public class AuthService(AppDbContext db, IConfiguration config, TimeProvider ti
         db.Users.Add(user);
         await db.SaveChangesAsync();
 
+        logger.LogInformation("New user registered: {UserId}", user.Id);
+
         return BuildTokens(user);
     }
 
@@ -38,7 +40,12 @@ public class AuthService(AppDbContext db, IConfiguration config, TimeProvider ti
             ?? throw new UnauthorizedAccessException("Invalid credentials.");
 
         if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
+        {
+            logger.LogWarning("Failed login attempt for user {UserId}", user.Id);
             throw new UnauthorizedAccessException("Invalid credentials.");
+        }
+
+        logger.LogInformation("User {UserId} logged in", user.Id);
 
         return BuildTokens(user);
     }

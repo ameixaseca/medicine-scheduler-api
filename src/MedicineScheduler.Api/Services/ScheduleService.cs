@@ -6,7 +6,7 @@ using TimeZoneConverter;
 
 namespace MedicineScheduler.Api.Services;
 
-public class ScheduleService(AppDbContext db, TimeProvider time)
+public class ScheduleService(AppDbContext db, TimeProvider time, ILogger<ScheduleService> logger)
 {
     public async Task<List<ScheduleItemResponse>> GetForTodayAsync(Guid userId)
     {
@@ -46,6 +46,9 @@ public class ScheduleService(AppDbContext db, TimeProvider time)
         log.TakenAt = time.GetUtcNow().UtcDateTime;
         log.SkippedBy = null;
         await db.SaveChangesAsync();
+
+        logger.LogInformation("Log {LogId} confirmed as taken by user {UserId}", logId, userId);
+
         return ToAction(log);
     }
 
@@ -55,6 +58,9 @@ public class ScheduleService(AppDbContext db, TimeProvider time)
         log.Status = LogStatus.Skipped;
         log.SkippedBy = Entities.SkippedBy.Caregiver;
         await db.SaveChangesAsync();
+
+        logger.LogInformation("Log {LogId} skipped by user {UserId}", logId, userId);
+
         return ToAction(log);
     }
 

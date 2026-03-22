@@ -8,6 +8,7 @@ public class User
     public string Email { get; set; } = "";
     public string PasswordHash { get; set; } = "";
     public string Name { get; set; } = "";
+    public string? ProfilePicture { get; set; }
     public string Timezone { get; set; } = "UTC";
     public NotificationPreference NotificationPreference { get; set; }
     public bool IsDeleted { get; set; }
