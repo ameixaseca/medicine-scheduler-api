@@ -7,3 +7,6 @@ obj/
 .vscode/
 node_modules/
 .vs/
+/src/MedicineScheduler.Api/logs
+/src/MedicineScheduler.Api/medicine_scheduler.db-shm
+/src/MedicineScheduler.Api/medicine_scheduler.db-wal
